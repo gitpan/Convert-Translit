@@ -2,3 +2,6 @@ Revision history for Perl extension Convert::Translit.
 
 1.00   21 October 1997
 	- original version
+
+1.01   24 October 1997
+    - improved documentation

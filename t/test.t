@@ -94,7 +94,7 @@ exit;
 
 __END__
 Actual output of this script:
-# Hard Disk:Perl:Convert-Translit-1.00:t:test.t syntax OK
+
 Convert from Latin2 to Ebcdic-US and back:
 You can get verbose output by assigning the variable "vrbos".
 Text is Polish for "That quick red fox will be jumping over the sleeping lazy brown dog."
@@ -167,4 +167,3 @@ Ebcdic-US text: Ö¦@¢©¨‚’‰@ƒ©…™¦–•¨@“‰¢@‚…„©‰…@¢’’“@•„@¢—‰ƒ…‡–@—™–©•‰ƒ©…‡–@‚
 Latin2 text again: Ow szybki czerwony lis bedzie skakal nad spiacego prozniaczego brazowego psa.
 
 Done
-

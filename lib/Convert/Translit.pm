@@ -13,7 +13,7 @@ use vars qw($VERSION @ISA @EXPORT_OK);
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(transliterate build_substitutes);
-$VERSION = '1.00'; # dated 21 October 1997
+$VERSION = '1.01'; # dated 24 October 1997
 use integer;
 
 if ($] < 5) {die "Perl version must be at least 5.\n";}
@@ -727,7 +727,7 @@ use Convert::Translit;
 
 =head1 DESCRIPTION
 
-This module converts strings among 8-bit character sets defined by IETF RFC 1345.  The RFC document is included as file "rfc1345" so you can look up character set names and aliases; it's also read by the module when creating conversion maps.
+This module converts strings among 8-bit character sets defined by IETF RFC 1345 (about 128 character sets).  The RFC document is included as file "rfc1345" so you can look up character set names and aliases; it's also read by the module when creating conversion maps.
 
 Export_OK Functions:
 
@@ -772,23 +772,23 @@ Only one-to-one character mapping is done, so characters with diacritics (like A
 
 =head1 EXAMPLES
 
-  Convert Russian language text from IBM to ASCII basis:
+  Convert Russian language text from IBM to ASCII encoding:
   $xxx = new Convert::Translit("EBCDIC-Cyrillic", "Cyrillic");
   $ascii_cyr_st = $xxx->transliterate($ibm_cyr_st);
 
-  Convert from basic ASCII (default $orig_chset) to Latin2 (Central European):
+  Convert from plain ASCII (default $orig_chset) to Latin2 (Central European):
   $yyy = new Convert::Translit("Latin2");
   $cnt_eur_st = $yyy->transliterate($ascii_st);
 
-  Since ASCII is a subset of Latin2, nothing is lost in transliteration.
+  Since plain ASCII is subset of Latin2, nothing is lost in transliteration.
   But going the other direction requires numerous simplifications:
   $zzz = new Convert::Translit("Latin2", "ascii");
   $ascii_st = $zzz->transliterate($cnt_eur_st);
 
-  Back to ASCII again, although substitutions will probably mean ($again ne $cnt_eur_st):
+  Back to ASCII again, although substitutions probably mean ($again ne $cnt_eur_st):
   $again = $yyy->transliterate($ascii_st);
 
-  The test.pl script has elaborate example converting between Polish and EBCDIC-US.
+  The t/test.t script has elaborate example converting Polish language text to EBCDIC-US.
 
 =head1 PORTABILITY
 
@@ -806,7 +806,7 @@ Genji Schmeder E<lt>genji@community.netE<gt>
 
 =head1 COPYRIGHT
 
-Version 1.00 dated 21 October 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+Version 1.01 dated 24 October 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 ACKNOWLEDGEMENTS
 
