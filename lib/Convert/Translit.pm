@@ -13,7 +13,7 @@ use vars qw($VERSION @ISA @EXPORT_OK);
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(transliterate build_substitutes);
-$VERSION = '1.01'; # dated 24 October 1997
+$VERSION = '1.02'; # dated 3 November 1997
 use integer;
 
 if ($] < 5) {die "Perl version must be at least 5.\n";}
@@ -26,17 +26,19 @@ undef &where_module;
 my %nam_mne;  # hash of name keyed by mnemonic
 my %mne_nam;  # hash of mnemonic keyed by name
 my %aprox_mne;  # hash of substitute list keyed by mnemonic
-my @transform = (0 .. 255);  # if new() never called, transliterate() returns unchanged arg
+# if new() never called, transliterate() returns unchanged arg
+my @transform = (0 .. 255);
 my $verbose = 0;
 1;
 
-
+#solaris
 sub where_module {
 my @xx = caller;
 use File::Basename;
 my $yy = dirname($xx[1]);
-if ( ($^O ne "MacOS") && ($yy =~ /^\/.*[^\/]$/) ) {
-	$yy .= "/"; # adjust for Macintosh and Unix different return from dirname()
+# adjust for Macintosh and Unix different return from dirname()
+if ( ($^O ne "MacOS") && ($yy =~ /[^\/]$/) ) {
+	$yy .= "/";
 }
 return $yy;
 }
@@ -44,15 +46,15 @@ return $yy;
 
 sub new {
 my ($bb, $cc, $dd, $ee, $gg, $ii, $jj, $kk, $line);
-my ($mm, $pp, $qq, $uu, $ww, $xx, $yy, $zz);
-my (@ch_tab, @thistab, @bitmap, @ff, @tt, @pp, @yy);
+my ($mm, $pp, $qq, $uu, $vv, $ww, $xx, $yy, $zz);
+my (@ch_tab, @thistab, @bitmap, @ff, @tt, @pp, @oo);
 my (%duplcatfrom, %duplcatto);
 my $this = shift;
 my $class = ref($this) || $this;
 
-%nam_mne = {};
-%mne_nam = {};
-%aprox_mne = {};
+%nam_mne = ();
+%mne_nam = ();
+%aprox_mne = ();
 
 # syntax: new([FROM charset], TO charset, [verbose])
 my @chset;
@@ -86,8 +88,8 @@ for $ii ( 0 .. 1 ){
 		chomp $line;
 	 	if ($line =~ /^ACKNOWLEDGEMENTS/) { # past relevant section
 			if (@thistab) { # was previous table collected?
-				if (relvnt_tab($chset[$ii], \@thistab) ) { # is this the table we want?
-					@ch_tab[$ii] = [ @thistab ];
+				if (relvnt_tab($chset[$ii], \@thistab) ) {
+					$ch_tab[$ii] = [ @thistab ];
 				}
 			}
 			last;
@@ -96,13 +98,14 @@ for $ii ( 0 .. 1 ){
 			next;
 		}
 		$line =~ s/^\s*//; # trim leading spaces
-		if ($line !~ /^&charset\s/) { # be sure of ending a table by encountering the next
+		# be sure of ending a table by encountering the next
+		if ($line !~ /^&charset\s/) {
 			push @thistab, $line;
 			next;
 		}
 		if (@thistab) { # was previous table collected?
-			if (relvnt_tab($chset[$ii], \@thistab)) { # is this the table we want?
-				@ch_tab[$ii] = [ @thistab ];
+			if (relvnt_tab($chset[$ii], \@thistab)) {
+				$ch_tab[$ii] = [ @thistab ];
 				last;
 			}
 		}
@@ -125,7 +128,7 @@ for $ii ( 0 .. 1 ){
 	for $jj ( 0 .. $#{$ch_tab[$ii]} ) {
 		if($ch_tab[$ii][$jj] =~ /^&bits\b\s*(\d*)/){
 			if ($1 != 0 || $1 != 8) {
-				print STDERR "Sorry, can't handle $1\-bit charsets like \"$chset[$ii]\".\n";
+				print STDERR "Can't handle $1\-bit charsets like $chset[$ii].\n";
 				$qq = 1;
 				last;
 			}
@@ -137,7 +140,7 @@ if ($qq) {die;}
 for $ii ( 0 .. 1 ){
 	for $jj ( 0 .. $#{$ch_tab[$ii]} ) {
 		if($ch_tab[$ii][$jj] =~ /^&(code2|codex|comb2)\b/){
-			print STDERR "Sorry, can't handle $1 terms in charset \"$chset[$ii]\".\n";
+			print STDERR "Can't handle $1 terms in charset $chset[$ii].\n";
 			$qq = 1;
 			last;
 		}
@@ -157,11 +160,12 @@ for $ii ( 0 .. 1 ){
 		}
 		if($line =~ /^&duplicate\s+([\da-fA-F]+)\s+([^\s]+)/){
 			$pp = $1; $mm = $2; # position already in base 10
-			# examples: "duplicate 91 AE", "duplicate 92 O/" (position, duplicate mnemonic)
+			# examples: "duplicate 91 AE", "duplicate 92 O/" (position, dup mnemonic)
 			# organize duplicate keeping differently for FROM and TO charsets
 			if ($ii == 0) {
 				if ($duplcatfrom{$pp} ) {
-					push @{$duplcatfrom{$pp}{Mnemonics}}, "$mm"; # FROM keyed by position
+					# FROM keyed by position
+					push @{$duplcatfrom{$pp}{Mnemonics}}, "$mm";
 				} else {
 					$duplcatfrom{$pp} = {Position => $pp, Mnemonics => [ "$mm" ],};
 				}
@@ -172,12 +176,14 @@ for $ii ( 0 .. 1 ){
 			}
 		}
 		# flush control info (just use all defined keywords)
-		if($line =~ /^&(charset|alias|g\desc|bits|code|code2|codex|duplicate|rem|comb2)\b/) {
+		if($line =~
+			/^&(charset|alias|g\desc|bits|code|code2|codex|duplicate|rem|comb2)\b/) {
 			$dd = -1;
 			next;
 		}
 		if ($dd < 0) {
-			if ($verbose) {print "Strange! You should examine the charset table: \"$line\"\n";}
+			if ($verbose)
+				{print "Strange! You should examine the charset table: \"$line\"\n";}
 			next;
 		}
 		@pp = split(/\s+/, $line);
@@ -188,7 +194,8 @@ for $ii ( 0 .. 1 ){
 				$uu = "";
 			}
 			if (($uu) && (! $nam_mne{$uu})) {
-				printf ("Warning: position %x (hex) has invalid mnemonic \"%s\".\n", $dd, $uu);
+				printf "Warning: position %x (hex) has invalid mnemonic \"%s\".\n",
+						$dd, $uu;
 				$uu = "";
 			}
 			$bitmap[$ii][$dd++] = $uu;
@@ -214,7 +221,7 @@ for $ii ( 0 .. 1 ){
 # &duplicate 91 AE
 # &duplicate 92 O/ 
 
-#create transform table
+$#transform = $#{$bitmap[0]}; # create transliterator table
 PIERWSZY: for $jj ( 0 .. $#{$bitmap[0]} ) {
 	$transform[$jj] = -1;  # initialize since 0 is valid value
 	@tt = ( $bitmap[0][$jj] ); # start list with one element
@@ -222,25 +229,25 @@ PIERWSZY: for $jj ( 0 .. $#{$bitmap[0]} ) {
 		push @tt, @{$duplcatfrom{$jj}{Mnemonics}};
 #print "BB $jj $#tt <<< @tt >>>\n";
 	}
-	@yy = ();
+	@oo = ();
 	for $xx ( 0 .. $#tt ) { # refine list
 		if (length($tt[$xx]) > 0) {
-			push @yy, $tt[$xx];
+			push @oo, $tt[$xx];
 		}
 	}
-	if (! @yy) {
+	if (! @oo) {
 		next;
 	}
-	for $bb ( 0 .. $#yy ) { # match any mnemonics for this position in FROM charset
-		$uu = $yy[$bb];
+	for $bb ( 0 .. $#oo ) { # match any mnemonics for this position in FROM charset
+		$uu = $oo[$bb];
 		for $kk ( 0 .. $#{$bitmap[1]} ) { #search TO charset
 			if ($uu eq $bitmap[1][$kk]) {
 				$transform[$jj] = $kk;
 				next PIERWSZY;
 			}
 		}
-		if ($ee = $duplcatto{$uu}) { # search TO charset duplicates
-			$transform[$jj] = $ee;
+		if (exists $duplcatto{$uu}) { # search TO charset duplicates
+			$transform[$jj] = $duplcatto{$uu};
 			next PIERWSZY;
 		}
 	}
@@ -252,15 +259,15 @@ for $jj ( 0 .. $#transform ) {
 	if ( ! (($jj+1) % 16)) { if ($verbose) { print "\n";}}
 }
 
-$ww = 0;
-for $jj ( 0 .. $#transform ) { # try to approximate using lists from prep module
+$vv = $ww = 0;
+for $jj ( 0 .. $#transform ) { # try to approximate using substitute lists
 	if ($transform[$jj] >= 0) {
 		next;
 	}
 	if (! ($gg = $bitmap[0][$jj]) ) { # undefined
 		next;
 	}
-TRZECI: foreach $pp (@{$aprox_mne{ $gg}}) {
+TRZECI: foreach $pp (@{$aprox_mne{$gg}}) {
 		for $cc ( 0 .. $#{$bitmap[1]} ) {
 			$zz = $bitmap[1][$cc];
 			if ($zz eq $pp) { # substitute must be in TO char set
@@ -269,13 +276,13 @@ TRZECI: foreach $pp (@{$aprox_mne{ $gg}}) {
 					$ww = 1;
 					if ($verbose) {print "\nApproximate substitutes:\n";}
 				}
-				if ($verbose) { printf ("%X==>%X\t%s==>%s\n", $jj, $cc,
-								$nam_mne{ $gg}, $nam_mne{ $zz});}
+				if ($verbose) { printf "%X==>%X\t%s==>%s\n", $jj, $cc,
+								$nam_mne{ $gg}, $nam_mne{ $zz};}
 				last TRZECI;
 			}
 		}
 	}
-	$yy = 1; # defined character but no substitute
+	$vv = 1; # defined character but no substitute
 }
 
 if ($ww) {
@@ -287,64 +294,62 @@ if ($ww) {
 }
 
 # non-equivalent substitutions (like "RIGHT SQUARE BRACKET" for "CENT SIGN")
-if ($yy) {
-@ff = ();
-for $jj ( 0 .. $#transform ) { # list those in need in FROM charset
-	if (($transform[$jj] < 0) && $bitmap[0][$jj] ) {
-		push @ff, $jj;
+if ($vv) {
+	@ff = ();
+	for $jj ( 0 .. $#transform ) { # list those in need in FROM charset
+		if (($transform[$jj] < 0) && $bitmap[0][$jj] ) {
+			push @ff, $jj;
+		}
 	}
-}
-if (@ff) {
-@tt = ();
-PIATY: for $bb ( 0 .. $#{$bitmap[1]} ) { # list availables in TO charset
-		# start at usual second ascii graphic (hoping to maximize graphics)
-		$cc = (34 + $bb) % (1 + $#{$bitmap[1]} );
-		if ($zz = $bitmap[1][$cc]) {
-			for $ii ( 0 .. $#{$bitmap[0]} ) {
-				if ($zz eq $bitmap[0][$ii]) {
-					next PIATY;
+	if (@ff) {
+		@tt = ();
+PIATY:	for $bb ( 0 .. $#{$bitmap[1]} ) { # list availables in TO charset
+			# start at usual second ascii graphic (hoping to maximize graphics)
+			$cc = (34 + $bb) % (1 + $#{$bitmap[1]} );
+			if ($zz = $bitmap[1][$cc]) {
+				for $ii ( 0 .. $#{$bitmap[0]} ) {
+					if ($zz eq $bitmap[0][$ii]) {
+						next PIATY;
+					}
+				}
+				push @tt, $cc;
+			}
+		}
+	}
+	$gg = $ee = 0;
+SIODMY: while ( ($#ff >= 0) && ($#tt >= 0) ) {
+		for $jj ($gg .. $#ff) { # first try to match equal hex values
+			$ww = $ff[$jj];
+			for $kk (0 .. $#tt) {
+				if ( $ww == $tt[$kk]) {
+					$transform[ $ww] = $ww;
+					if (!$ee) {
+						$ee = 1;
+						if ($verbose) {print "\nNon-equivalent substitutes:\n";}
+					}
+					if ($verbose)
+						{printf "%X==>%X\t%s==>%s\n", $ww, $ww,
+							$nam_mne{$bitmap[0][ $ww]}, $nam_mne{$bitmap[1][ $ww]};}
+					splice @ff, $jj, 1;
+					splice @tt, $kk, 1;
+					$gg = $jj;
+					next SIODMY;
 				}
 			}
-			push @tt, $cc;
 		}
+		last;
 	}
-}
-
-$gg = $ee = 0;
-SIODMY: while ( ($#ff >= 0) && ($#tt >= 0) ) {
-for $jj ($gg .. $#ff) { # first try to match equal hex values
-	$ww = $ff[$jj];
-	for $kk (0 .. $#tt) {
-		if ( $ww == $tt[$kk]) {
-			$transform[ $ww] = $bitmap[1][ $ww];
-			if (!$ee) {
-				$ee = 1;
-				if ($verbose) {print "\nNon-equivalent substitutes:\n";}
-			}
-			if ($verbose)
-				{printf ("%X==>%X\t%s==>%s\n", $ww, $ww,
-					$nam_mne{$bitmap[0][ $ww]}, $nam_mne{$bitmap[1][ $ww]});}
-			splice @ff, $jj, 1;
-			splice @tt, $kk, 1;
-			$gg = $jj;
-			next SIODMY;
+	$gg = ($#ff < $#tt)? $#ff : $#tt;
+	for $jj (0 .. $gg ) {
+		$transform[$ff[$jj]] = $tt[$jj];
+		if (!$ee) {
+			$ee = 1;
+			if ($verbose) {print "\nNon-equivalent substitutes:\n";}
 		}
+		if ($verbose)
+			{printf "%X==>%X\t%s==>%s\n", $ff[$jj], $tt[$jj],
+				$nam_mne{$bitmap[0][$ff[$jj]]}, $nam_mne{$bitmap[1][$tt[$jj]]};}
 	}
-}
-last;
-}
-
-$gg = ($#ff < $#tt)? $#ff : $#tt;
-for $jj (0 .. $gg ) {
-	$transform[$ff[$jj]] = $bitmap[1][$tt[$jj]];
-	if (!$ee) {
-		$ee = 1;
-		if ($verbose) {print "\nNon-equivalent substitutes:\n";}
-	}
-	if ($verbose)
-		{printf ("%X==>%X\t%s==>%s\n", $ff[$jj], $tt[$jj],
-			$nam_mne{$bitmap[0][$ff[$jj]]}, $nam_mne{$bitmap[1][$tt[$jj]]});}
-}
 }
 
 $ee = $yy = 0; # anything left untranslated?
@@ -356,7 +361,7 @@ for $jj ( 0 .. $#transform ) {
 				$ee = 1;
 				if ($verbose) {print "\nNon-equivalent remnant:\n";}
 			}
-			if ($verbose) {printf ("%X\t%s\n", $jj, $nam_mne{$mm});}
+			if ($verbose) {printf "%X\t%s\n", $jj, $nam_mne{$mm};}
 		}
 	}
 }
@@ -375,7 +380,7 @@ DRUGI: for $bb ( 0 .. $#{$bitmap[1]} ) {
 		}
 	}
 	if ($verbose)
-		{printf ("\nNon-equivalence indicator: %X\t%s\n", $cc, $nam_mne{$xx})};
+		{printf "\nNon-equivalence indicator: %X\t%s\n", $cc, $nam_mne{$xx}};
 	for $jj ( 0 .. $#transform ) { # interpolate non-equiv character
 		if (($transform[$jj] < 0) && $bitmap[0][$jj]) {
 			$transform[$jj] = $cc;
@@ -397,7 +402,7 @@ SZOSTY: for ($cc = $#{$bitmap[1]}; $cc >= 0; --$cc ) {
 		last; # success
 	}
 	if ( ! ($yy = $nam_mne{$xx}) ) {$yy = "(undefined character)";}
-	if ($verbose) {printf ("\nUndefined indicator: %X\t%s\n", $cc, $yy)};
+	if ($verbose) {printf "\nUndefined indicator: %X\t%s\n", $cc, $yy};
 	for $jj ( 0 .. $#transform ) { # interpolate non-equiv character
 		if ($transform[$jj] < 0) {
 			$transform[$jj] = $cc;
@@ -405,9 +410,8 @@ SZOSTY: for ($cc = $#{$bitmap[1]}; $cc >= 0; --$cc ) {
 	}
 }
 
-# if FROM charset length < 256, assume repeated for next 128 chars (like extended ascii)
+# if FROM charset length < 256, assume repeated for upper 128 chars
 if ($#transform < 128) {push @transform, @transform;}
-$#transform = 256-1;  # overly cautious
 $yy = "$chset[0]".".to."."$chset[1]";
 my $self = {TRN_NAM=>"$yy", TRN_ARY=>[@transform]};
 bless $self, $class;
@@ -491,7 +495,7 @@ while (($xx, $aa) = each  %mne_nam) { # (name, nmemonic)
 	}
 	$yy = $xx;
 	while ($yy =~ /[^\s]\s+[^\s]+\s*$/) {
-		$yy =~ s/^(.*[^\s])\s+[^\s]+\s*$/\1/; # delete words from right
+		$yy =~ s/^(.*[^\s])\s+[^\s]+\s*$/$1/; # delete words from right
 		if ($bb = $mne_nam{$yy}) {
 			push @{ $aprox_mne{$aa} }, "$bb"; # add to sub list
 #print "$aa\t@{$aprox_mne{$aa}}\n";
@@ -506,7 +510,7 @@ while (($xx, $aa) = each  %mne_nam) { # (name, nmemonic)
 	}
 	$yy = $xx;
 	while ($yy =~ /[^\s]\s+[^\s]+\s*$/) {
-		$yy =~ s/^[^\s]+\s+(.*)$/\1/; # delete words from left
+		$yy =~ s/^[^\s]+\s+(.*)$/$1/; # delete words from left
 		if ($yy =~ /^WITH\s/i) { # avoid matching overly broad phrases
 			last;
 		}
@@ -524,7 +528,6 @@ while (($xx, $aa) = each  %mne_nam) { # (name, nmemonic)
 #    elements are (A, B, C, D, E), then comparisions will be E with (A, B, C, D),
 #    D with (A, B, C), C with (A, B), B with (A) and A with nothing.
 
-#print (time() - $start); print " look for string1 inside string2, number terms, Japanese syllabics\n";
 #print (time() - $start); print " look for string1 inside string2, number terms\n";
 $ff = "DIGIT|NUMBER";
 #$hh = "HIRAGANA|KATAKANA";
@@ -646,7 +649,8 @@ for($jj = 1;<RFC>;) {
 	if (/^4.  CHARSETS/) {
 		last;
 	}
-	if (/^(Simonsen|RFC 1345) / || /^.{0,3}$/) { # page head, foot, effectively empty lines
+	# page head, foot, effectively empty lines
+	if (/^(Simonsen|RFC 1345) / || /^.{0,3}$/) {
 		next;
 	}
 	if (/SP\s+0020\s+SPACE/) { # first code def line
@@ -656,15 +660,19 @@ for($jj = 1;<RFC>;) {
 		next;
 	}
 	++$jj;
-	if(/^\s*([^\s]+)\s+([\da-fA-F]{4})\s{4}\b(.+)\s*$/ || /^(\s+)(e000)\s{4}\b(.+)\s*$/) {
+	if(/^\s*([^\s]+)\s+([\da-fA-F]{4})\s{4}\b(.+)\s*$/ ||
+			/^(\s+)(e000)\s{4}\b(.+)\s*$/) {
 		$mm = $1; $hh = $2; $xx = hex $2; $nn = $3;	
-		if ($hh eq "e000") { # normalize unusual e000 format which indicates unfinished (Mnemonic)
+		# normalize unusual e000 format which indicates unfinished (Mnemonic)
+		if ($hh eq "e000") {
 			$mm = " "; # single space
 		}
- 		if ($hh eq "1e4b") { # correct mistake in LATIN SMALL LETTER N WITH CIRCUMFLEX BELOW
+ 		# correct mistake in LATIN SMALL LETTER N WITH CIRCUMFLEX BELOW
+ 		if ($hh eq "1e4b") {
 			$mm = "n->";
 		}
- 		if ($hh eq "1e69") { # correct mistake in LATIN SMALL LETTER S WITH DOT BELOW AND DOT ABOVE
+ 		# correct mistake in LATIN SMALL LETTER S WITH DOT BELOW AND DOT ABOVE
+ 		if ($hh eq "1e69") {
 			$mm = "s.-.";
 		}
 		if ($yy && ($jj != ($kk +1)) && ($xx != ($yy +1))) {
@@ -678,7 +686,7 @@ for($jj = 1;<RFC>;) {
 			print "Same mnemonic $mne_nam{$nn} for $nn and hex code $hh \n";
 		}
 		# normalize for more thorough substitution
-		$nn =~ s/\b(SUBSCRIPT|SUPERSCRIPT)\s+($$digits)\b/\1 DIGIT \2/;
+		$nn =~ s/\b(SUBSCRIPT|SUPERSCRIPT)\s+($$digits)\b/$1 DIGIT $2/;
 		$nam_mne{$mm} = "$nn";  # hash of name keyed by mnemonic
 		$mne_nam{$nn} = "$mm";  # hash of mnemonic keyed by name
 		$aprox_mne{$mm} = [];   # list approx subs keyed by mnemonic
@@ -727,7 +735,7 @@ use Convert::Translit;
 
 =head1 DESCRIPTION
 
-This module converts strings among 8-bit character sets defined by IETF RFC 1345 (about 128 character sets).  The RFC document is included as file "rfc1345" so you can look up character set names and aliases; it's also read by the module when creating conversion maps.
+This module converts strings among 8-bit character sets defined by IETF RFC 1345 (about 128 sets).  The RFC document is included so you can look up character set names and aliases; it's also read by the module when composing conversion maps.
 
 Export_OK Functions:
 
@@ -735,11 +743,11 @@ Export_OK Functions:
 
 =item transliterate()
 
-returns a string in $result_chset for an argument string in $orig_chset, transliterating by a map constructed by new().
+returns a string in $result_chset for an argument string in $orig_chset, transliterating by a map composed by new().
 
 =item build_substitutes()
 
-rebuilds the file "substitutes" containing character definitions and approximate substitutions used when a character in $orig_chset isn't defined in $result_chset.  For example, "Latin capital A" may be substituted for "Latin capital A with ogonek" (the "little tail" on Polish nazalized A and E).  It takes a long time to rebuild this file, but you should never need to.  Its only source of information is file "rfc1345".
+rebuilds the file "substitutes" containing character definitions and approximate substitutions used when a character in $orig_chset isn't defined in $result_chset.  For example, "Latin capital A" may be substituted for "Latin capital A with ogonek".  It takes a long time to rebuild this file, but you should never need to.  Its only source of information is file "rfc1345".
 
 =back
 
@@ -749,7 +757,7 @@ Object methods:
 
 =item new()
 
-creates a new object for transliterating from $orig_chset to $result_chset, these being names (or aliases) of 8-bit character sets defined in RFC 1345.  If only one argument, then $orig_chset is assumed to be "ascii".  If three arguments, the third is a verbosity flag.  Verbose output lists approximate substitutions and other compromises.
+creates a new object for converting from $orig_chset to $result_chset, these being names (or aliases) of 8-bit character sets defined in RFC 1345.  If only one argument, then $orig_chset is assumed "ascii".  If three arguments, the third is verbosity flag.  Verbose output lists approximate substitutions and other compromises.
 
 =item transliterate()
 
@@ -768,7 +776,7 @@ is same as the function of that name.
 
 =head1 METHODOLGY
 
-Only one-to-one character mapping is done, so characters with diacritics (like A-ogonek) are never converted to (letter character, diacritic character) pairs, rather are subject to simplification.  If no approximate substitute is available, then a unrelated substitute is chosen, preferably with the same code value.  Undefined $orig_chset characters are translated to a chosen indicator character.  Transliteration is not guaranteed commutative when substitutions were required.  An $orig_chset defined as 7-bit is assumed to be repeated to make an 8-bit set (in the style of "extended ascii"); no such adjustment is made for $result_chset.  The few mistakes in the RFC document are corrected in the module, leaving the document unchanged.
+Only one-to-one character mapping is done, so characters with diacritics (like A-ogonek) are never converted to (letter character, diacritic character) pairs, rather are subject to simplification.  If no approximate substitute is available, then a unrelated substitute is chosen, preferably with the same code value.  Undefined $orig_chset characters are translated to a chosen indicator character.  Transliteration is not guaranteed commutative when substitutions were required.  An $orig_chset defined as 7-bit is assumed to be repeated to make an 8-bit set (in the style of "extended ascii"); no such adjustment is made for $result_chset.  The few mistakes in the RFC document are corrected in the module.
 
 =head1 EXAMPLES
 
@@ -788,7 +796,7 @@ Only one-to-one character mapping is done, so characters with diacritics (like A
   Back to ASCII again, although substitutions probably mean ($again ne $cnt_eur_st):
   $again = $yyy->transliterate($ascii_st);
 
-  The t/test.t script has elaborate example converting Polish language text to EBCDIC-US.
+  The example.pl script converts a Polish language phrase from Latin2 to EBCDIC-US.
 
 =head1 PORTABILITY
 
@@ -806,7 +814,7 @@ Genji Schmeder E<lt>genji@community.netE<gt>
 
 =head1 COPYRIGHT
 
-Version 1.01 dated 24 October 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+Version 1.02 dated 3 November 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 ACKNOWLEDGEMENTS
 
