@@ -1,6 +1,6 @@
 #!perl
 
-BEGIN {print "1..7\n";}
+BEGIN {print "1..9\n";}
 END {print "not ok 1\n" unless $loaded;}
 
 use Convert::Translit;
@@ -33,9 +33,11 @@ print "ok 2\n";
 );
 $bb = pack("C*", @ebcdic_us_result);
 $lattoeb = new Convert::Translit( $from_charset, $to_charset);
+print "not " if (!defined $lattoeb);
+print "ok 3\n";
 $yy = Convert::Translit::transliterate($xx);
 print "not " if ($bb ne $yy);
-print "ok 3\n";
+print "ok 4\n";
 
 $ee = "Ow szybki czerwony lis bedzie skakal nad spiacego prozniaczego brazowego psa.";
 @latin2_again = (
@@ -47,17 +49,19 @@ $ee = "Ow szybki czerwony lis bedzie skakal nad spiacego prozniaczego brazowego 
 );
 $cc = pack ("C*", @latin2_again);
 print "not " if ($cc ne $ee);
-print "ok 4\n";
+print "ok 5\n";
 
 $ebtolat = new Convert::Translit( $to_charset, $from_charset);
+print "not " if (!defined $ebtolat);
+print "ok 6\n";
 $zz = Convert::Translit::transliterate($yy);
 print "not " if ($zz ne $ee);
-print "ok 5\n";
+print "ok 7\n";
 
 $yy = $lattoeb->transliterate($xx);
 print "not " if ($bb ne $yy);
-print "ok 6\n";
+print "ok 8\n";
 
 $zz = $ebtolat->transliterate($yy);
 print "not " if ($zz ne $ee);
-print "ok 7\n";
+print "ok 9\n";

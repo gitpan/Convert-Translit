@@ -13,7 +13,7 @@ use vars qw($VERSION @ISA @EXPORT_OK);
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(transliterate build_substitutes);
-$VERSION = '1.02'; # dated 3 November 1997
+$VERSION = '1.03'; # dated 5 November 1997
 use integer;
 
 if ($] < 5) {die "Perl version must be at least 5.\n";}
@@ -31,7 +31,7 @@ my @transform = (0 .. 255);
 my $verbose = 0;
 1;
 
-#solaris
+
 sub where_module {
 my @xx = caller;
 use File::Basename;
@@ -41,7 +41,7 @@ if ( ($^O ne "MacOS") && ($yy =~ /[^\/]$/) ) {
 	$yy .= "/";
 }
 return $yy;
-}
+} # end of sub where_module
 
 
 sub new {
@@ -73,18 +73,19 @@ $verbose = shift;
 # &code 0
 # NU SH SX EX ET EQ AK BL BS HT LF VT FF CR SO SI
 
-load_dsf( $substi_fnam);
+load_dsf( $substi_fnam) or return undef;
 if ($verbose) {print "Creating transliteration from \"$chset[0]\" to \"$chset[1]\"\n";}
 for $ii ( 0 .. 1 ){
 #traverse whole file twice for simplicity
-	if(!open(RFC, $rfc_fnam)) {die "Can't open $rfc_fnam:$!.\n";}
+	unless (open(RFC, $rfc_fnam)) {print "Can't open $rfc_fnam: $!.\n"; return undef;}
 	while(<RFC>) { #skip to relevant section
 		if (/5.\s+CHARSET TABLES/) {
 			last;
 		}
 	}
 	@thistab = ();
-	while($line = <RFC>) { # read table lines
+	while(<RFC>) { # read table lines
+		$line = $_;
 		chomp $line;
 	 	if ($line =~ /^ACKNOWLEDGEMENTS/) { # past relevant section
 			if (@thistab) { # was previous table collected?
@@ -122,7 +123,7 @@ for $ii ( 0 .. 1 ){
 		$qq = 1;
 	}
 }
-if ($qq) {die;}
+if ($qq) {return undef;}
 
 for $ii ( 0 .. 1 ){
 	for $jj ( 0 .. $#{$ch_tab[$ii]} ) {
@@ -135,7 +136,7 @@ for $ii ( 0 .. 1 ){
 		}
 	}
 }
-if ($qq) {die;}
+if ($qq) {return undef;}
 
 for $ii ( 0 .. 1 ){
 	for $jj ( 0 .. $#{$ch_tab[$ii]} ) {
@@ -146,7 +147,7 @@ for $ii ( 0 .. 1 ){
 		}
 	}
 }
-if ($qq) {die;}
+if ($qq) {return undef;}
 
 #create bit maps
 for $ii ( 0 .. 1 ){
@@ -440,13 +441,13 @@ for $jj ( 0 .. $#{@$tabref} ){
 		return 1; # true
 	}
 }
-return 0; # false
+return undef; # false
 } # end of sub relvnt_tab
 
 
 sub load_dsf { # load code definitions and approximate substitutes
 my ($mm, $nn, @ww);
-if(!open(DSF, "$_[0]")) {die "Can't open $_[0]: $!.\n";}
+unless (open(DSF, "$_[0]")) {print "Can't open $_[0]: $!.\n"; return undef;}
 while (<DSF>) {
 	chomp;
 	if (/^hash mnemonic=name/) { # first group header
@@ -468,6 +469,7 @@ while (<DSF>) {
 	$aprox_mne{$mm} = [@ww];
 }
 close DSF;
+return 1;
 } # end of sub load_dsf 
 
 
@@ -608,27 +610,33 @@ CZWARTY: for($gg = 0;;){
 }
 
 #print (time() - $start); print "\n";
-# for customer's protection, save old file if any
+# for user's protection, save old file if any
 $gg = "$substi_fnam".".bkp";
 if (! -e $gg) {rename( $substi_fnam, "$gg")};
-if(!open(DSF, ">$substi_fnam")) {
-	if (! -e $substi_fnam) {rename( "$gg", $substi_fnam)};
-	die "Can't create $substi_fnam: $!\n";
-}
-print DSF "hash mnemonic=name\n"; # header
-foreach $mm (sort keys %nam_mne ) {
-     print DSF "$mm\t$nam_mne{$mm}\n"; # mnemonic tab name newline
-}
-print DSF "hash mnemonic=substitute list\n"; # header
-foreach $mm (sort keys %aprox_mne ) {
-     print DSF "$mm"; # mnemonic
-	foreach $aa (0 .. $#{$aprox_mne{$mm}}) {
-		print DSF "\t$aprox_mne{$mm}[$aa]"; # each substitute
+# contrived loop wherein second pass only when open or write failure
+OSMY: for ($yy = 0; $yy == 0; $yy = 1) {
+	unless (open(DSF, ">$substi_fnam")) {next OSMY};
+	unless (print DSF "hash mnemonic=name\n") {next OSMY}; # header
+	foreach $mm (sort keys %nam_mne ) {
+	     # mnemonic tab name newline
+	     unless (print DSF "$mm\t$nam_mne{$mm}\n") {next OSMY};
 	}
-     print DSF "\n"; # newline
+	unless (print DSF "hash mnemonic=substitute list\n") {next OSMY}; # header
+	foreach $mm (sort keys %aprox_mne ) {
+	     unless (print DSF "$mm") {next OSMY};  # mnemonic
+		foreach $aa (0 .. $#{$aprox_mne{$mm}}) { # each substitute
+			unless (print DSF "\t$aprox_mne{$mm}[$aa]") {next OSMY};
+		}
+	     unless (print DSF "\n") {next OSMY}; # newline
+	}
+	last OSMY;
 }
 close DSF;
-#print (time() - $start); print " Done\n";
+if ($yy) {
+	if (! -e $substi_fnam) {rename( "$gg", $substi_fnam)};
+	print "Failed to create $substi_fnam: $!\n";
+	return undef;
+}
 return 1;
 } # end of sub build_substitutes
 
@@ -636,15 +644,15 @@ return 1;
 sub load_rfcdoc { #load code definition list
 my ($mm, $nn, $jj, $catch, $hh, $xx, $kk, $yy);
 my $digits = \"ZERO|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE";
-
-if(!open(RFC, $_[0])) {die "Can't open $_[0]: $!\n";}
-for(;<RFC>;) {
+unless (open(RFC, $_[0])) {print "Can't open $_[0]: $!\n"; return undef;}
+while(<RFC>) {
 	chomp;
 	if (/^3.  CHARACTER MNEMONIC TABLE/) {
 		last;
 	}
 }
-for($jj = 1;<RFC>;) {
+$jj = 1;
+while(<RFC>) {
 	chomp;
 	if (/^4.  CHARSETS/) {
 		last;
@@ -700,6 +708,7 @@ for($jj = 1;<RFC>;) {
 	}
 }
 close RFC;
+return 1;
 } # end of sub load_rfcdoc
 
 
@@ -731,11 +740,13 @@ use Convert::Translit;
   $result_st = $translator->transliterate($orig_st);
   $result_st = Convert::Translit::transliterate($orig_st);
 
+  build_substitutes Convert::Translit();
+
   Convert::Translit::build_substitutes();
 
 =head1 DESCRIPTION
 
-This module converts strings among 8-bit character sets defined by IETF RFC 1345 (about 128 sets).  The RFC document is included so you can look up character set names and aliases; it's also read by the module when composing conversion maps.
+This module converts strings among 8-bit character sets defined by IETF RFC 1345 (about 128 sets).  The RFC document is included so you can look up character set names and aliases; it's also read by the module when composing conversion maps.  Failing functions or objects return undef value.
 
 Export_OK Functions:
 
@@ -800,7 +811,7 @@ Only one-to-one character mapping is done, so characters with diacritics (like A
 
 =head1 PORTABILITY
 
-Requires Perl version 5.  Developed with MacPerl on Macintosh 68040 OS 7.6.1 and tested on Sun OS 4.1.3 Unix.
+Requires Perl version 5.  Developed with MacPerl on Macintosh 68040 OS 7.6.1.  Tested on Sun Unix 4.1.3.
 
 =head1 AUTHOR
 
@@ -814,7 +825,7 @@ Genji Schmeder E<lt>genji@community.netE<gt>
 
 =head1 COPYRIGHT
 
-Version 1.02 dated 3 November 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
+Version 1.03 dated 5 November 1997.  Copyright (c) 1997 Genji Schmeder. All rights reserved. This program is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
 
 =head1 ACKNOWLEDGEMENTS
 

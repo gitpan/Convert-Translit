@@ -1,23 +1,27 @@
 #!perl
 # Convert/Translit/example.pl  for testing Convert/Translit.pm
 #  Genji Schmeder  <genji@community.net>  21 October 1997
-package test_probowac_pruefen;
 if ($] < 5) {die "Perl version must be at least 5.\n";}
 use strict;
 use integer;
 
+package test_probowac_pruefen;
+my ($aa, $bb, $ebtolat, $ff, $from_charset, $gg);
+my ($hh, $jj, $lattoeb, $to_charset, $vrbos, $xx, $yy, $zz,);
+my (@apsub, @ebcdic_us_result, @latin2_original, @mm, @nn);
+
 print scalar localtime; print "\n";
-my $from_charset = "Latin2";
-my $to_charset = "Ebcdic-US";
+$from_charset = "Latin2";
+$to_charset = "Ebcdic-US";
 print "Convert from $from_charset to $to_charset and back:\n";
 
 print "You can get verbose output by assigning the variable \"vrbos\".\n";
-my $vrbos = "";
+$vrbos = "";
 
-my $aa = q/Ów szybki czerwony lis bêdzie skaka³ nad ¶pi±cego pró¿niaczego br±zowego psa./;
+$aa = q/Ów szybki czerwony lis bêdzie skaka³ nad ¶pi±cego pró¿niaczego br±zowego psa./;
 print "Text is Polish for \"That quick red fox will be jumping over the sleeping lazy brown dog.\"\n";
 
-my @latin2_original = (
+@latin2_original = (
 	0xD3,0x77,0x20,0x73,0x7A,0x79,0x62,0x6B,0x69,0x20,0x63,0x7A,0x65,0x72,0x77,0x6F,
 	0x6E,0x79,0x20,0x6C,0x69,0x73,0x20,0x62,0xEA,0x64,0x7A,0x69,0x65,0x20,0x73,0x6B,
 	0x61,0x6B,0x61,0xB3,0x20,0x6E,0x61,0x64,0x20,0xB6,0x70,0x69,0xB1,0x63,0x65,0x67,
@@ -25,11 +29,11 @@ my @latin2_original = (
 	0x72,0xB1,0x7A,0x6F,0x77,0x65,0x67,0x6F,0x20,0x70,0x73,0x61,0x2E
 );
 
-my $xx = pack ("C*", @latin2_original);
+$xx = pack ("C*", @latin2_original);
 print "Original $from_charset text: $xx\n";
 if ($aa ne $xx) {print "Not really same original.  Flawed test.\n";}
 
-my @ebcdic_us_result = (
+@ebcdic_us_result = (
 	0xD6,0xA6,0x40,0xA2,0xA9,0xA8,0x82,0x92,0x89,0x40,0x83,0xA9,0x85,0x99,0xA6,0x96,
 	0x95,0xA8,0x40,0x93,0x89,0xA2,0x40,0x82,0x85,0x84,0xA9,0x89,0x85,0x40,0xA2,0x92,
 	0x81,0x92,0x81,0x93,0x40,0x95,0x81,0x84,0x40,0xA2,0x97,0x89,0x81,0x83,0x85,0x87,
@@ -39,33 +43,32 @@ my @ebcdic_us_result = (
 
 use Convert::Translit;
 print "\nBuild transliteration map $from_charset to $to_charset by new():\n";
-my $lattoeb = new Convert::Translit( $from_charset, $to_charset, $vrbos);
-my $jj = 0;
+$lattoeb = new Convert::Translit( $from_charset, $to_charset, $vrbos);
+$jj = 0;
 for ( @{$lattoeb->{TRN_ARY}} ) {
 	printf "%2.2X ", $_;
 	if ( ! ((++$jj) % 16)) {print "\n";}
 }
 print "\nCall fully qualified subroutine to convert $from_charset text to $to_charset:\n";
-my $yy = Convert::Translit::transliterate($xx);
+$yy = Convert::Translit::transliterate($xx);
 print "$to_charset text: $yy\n";
-my $bb = pack("C*", @ebcdic_us_result);
+$bb = pack("C*", @ebcdic_us_result);
 if ($bb ne $yy) {print "Unexpected $to_charset result.  Flawed test.\n";}
 
 print "\nBuild transliteration map $to_charset to $from_charset by new():\n";
-my $ebtolat = new Convert::Translit( $to_charset, $from_charset, $vrbos);
+$ebtolat = new Convert::Translit( $to_charset, $from_charset, $vrbos);
 $jj = 0;
 for ( @{$ebtolat->{TRN_ARY}} ) {
 	printf "%2.2X ", $_;
 	if ( ! ((++$jj) % 16)) {print "\n";}
 }
 print "\nCall fully qualified subroutine to convert $to_charset text to $from_charset:\n";
-my $zz = Convert::Translit::transliterate($yy);
+$zz = Convert::Translit::transliterate($yy);
 print "$from_charset text again: $zz\n";
 
 print "\nCertain characters were irreversibly changed:\n";
-my @mm = unpack("C*", $yy);
-my @nn = unpack("C*", $zz);
-my ($ff, $gg, $hh); 
+@mm = unpack("C*", $yy);
+@nn = unpack("C*", $zz);
 for $jj (0 .. $#latin2_original) {
 	$ff = $latin2_original[$jj];
 	$gg = $mm[$jj];
@@ -76,7 +79,7 @@ for $jj (0 .. $#latin2_original) {
 	}
 }
 
-my @apsub = (
+@apsub = (
 	"D3==>D6	LATIN CAPITAL LETTER O WITH ACUTE==>LATIN CAPITAL LETTER O",
 	"EA==>85	LATIN SMALL LETTER E WITH OGONEK==>LATIN SMALL LETTER E",
 	"B3==>93	LATIN SMALL LETTER L WITH STROKE==>LATIN SMALL LETTER L",

@@ -11,3 +11,7 @@ Revision history for Perl extension Convert::Translit.
     - correct bugs in non-equivalent substitution
     - cleanup warning diagnostics
     - separate scripts for make test and for example
+
+1.03   5 November 1997
+    - never die inside module subroutines, instead return undef
+    - cleanup warning diagnostic
